@@ -1,7 +1,6 @@
 Pythonチートシート
 
 >  ライブラリ
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import os
@@ -11,69 +10,100 @@ import random
 from datetime import datetime as dt
 import datetime
 import time
-import csv
 import json
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
+pd.options.display.precision = 2 # pandasの小数点表記
+# コマンドライン引数
+import sys
+import argparse
 
+# 自作ライブラリ
 import sys
 sys.path.append("lib") # 自作ライブラリのパスを追加
 import lib
 import lib.preprocess as pr
-import lib.stats as st
-import lib.draw_fig as dr
-import lib.pca as mypca
-import lib.clustering as cl
 import importlib
 importlib.reload(dr) # ライブラリの中身を更新したらreloadしないと単純に読み込んでも反映されない
-importlib.reload(st) # ライブラリの中身を更新したらreloadしないと単純に読み込んでも反映されない
-importlib.reload(mypca) # ライブラリの中身を更新したらreloadしないと単純に読み込んでも反映されない
-importlib.reload(cl) # ライブラリの中身を更新したらreloadしないと単純に読み込んでも反映されない
-
-# pandasの小数点表記
-pd.options.display.precision = 2
 
 
->  string処理
--  n桁になるよう0で埋める
+
+
+
+>  モジュールのインポートエラー（パス通ってない）
+ModuleNotFoundError: No module named 'kfp'
+モジュールがインストールされてる場所を確認
+!pip show モジュール名
+パスを追加
+import sys
+print(sys.path) # 現在通ってるパスの一覧が表示される。ここにpip showした結果が入ってなければ
+sys.path.append('/path/to/hogehoge')
+
+
+
+
+
+
+>  Jupyter Notebook
+-  進捗（tqdm）
+from tqdm import tqdm
+for _ in tqdm(リストやrange()などイテラブルオブジェクト):
+	...
+
+-  変数の保存
+%store               # 変数の一覧表示
+%store 変数名     # .ipythonあたりに保存されるらしい
+%store -r            # 保存されているすべての変数の読み込み
+%store -d 変数名 # 保存した変数を削除
+%store -z           # 保存した全ての変数の削除
+
+-  pandasのprintを「...」などで省略しないようにする
+print(pd.get_option("display.max_rows")) # df.head()で表示する列数
+pd.set_option('display.max_rows', 500) # max_columnsでも同じ
+
+
+-  stringをn桁になるよう0で埋める
+f"{i:04}" # 0001
 str(15).zfill(5) # 00015
 
 
 
->  print
-print(pd.get_option("display.max_rows")) # df.head()で表示する列数
-pd.set_option('display.max_rows', 500)
-# max_columnsでも同じ
-
-print("{} + {} = {}".format(a, b, c))  # 「2 + 3 = 5」と出力
-print(f"{a} + {b} = {c}") # 最初にfつけるだけ、かんたん
 
 
 
+>  コマンドライン引数
+def parse_options(args_str):
+    parser = argparse.ArgumentParser(
+        prog='xx.py',
+        usage='python xx.py [] []\n',
+        description='...',
+        epilog='end',
+        add_help=True
+    )
+    parser.add_argument('--arg1', type=int, default=0)
+    args = parser.parse_args(args_str)
+    return args
 
->  結合 
-df_concat = pd.concat([df1, df2], axis=0, ignore_index=True)
-行方向：axis=0（たてにつなげる）
-列方向：axis=1（よこにつなげる）
-ignore_index=True
+if __name__ == "__main__":
+    args_string = sys.argv[1:]
+    print(args_string)
+    main(args_string)
 
 
->  欠損値
-df = df.dropna(how="all")               # すべての値が欠損値である行を削除
-df = df.dropna(how="all", axis=1)   # すべての値が欠損値である列を削除
-df = df.dropna(how="any")             # 一つでも欠損値を含む行を削除
-df = df.dropna(how="any", axis=1) # 一つでも欠損値を含む列を削除
 
-df.fillna(0) # 欠損値を0で置換する
-np.sum(df.isnull()) # 欠損値の数
+
+
+
+
 
 
 >  行列抽出
 df.iloc[1]	 	# 1行だけ抽出
 df.iloc[1:3] 		# 複数行抽出
 df.iloc[1,3] 		# 行数、列数指定して特定のデータを抽出
-df.iloc[1:3,2:5] 	# 行数、列数指定して複数抽出
+df.iloc[1:3, 2:5] 	# 行数、列数指定して複数抽出
 df["col1"][1:3] 	# 行数、列名指定して特定のデータを抽出
 
 # df[1]、df[1,3]などはダメ
@@ -87,50 +117,76 @@ df.loc[['行名']]
 df["data"][-1:] # dffの最後の要素を取り出す（df["data"].tail(1)でもおｋ）
 
 
->  削除
-df = df.drop(df["col1"], axis=1) # 非破壊的
-df.drop(df["col1"], axis=1, inplace=True) # 破壊的
 
 
->  列名、行名変更
--  個別に変更したいとき
-df_new = df.rename(columns={'元の列名': '新しい列名'}, index={'元の行名': '新しい行名'})
--  一括変更
-df.columns = ["time", "data"] # 列名を一括で変更
-df = df.set_index(timestamp) # 行名を一括で変更（インデックス付与）、行名は、dfのカラム（ただのリストじゃダメ）
--  行名削除
-df = df.reset_index(drop=True)
+>  列の順序入れ替え、並べ替え
+df = df.reindex(columns=[cols]) # 任意の順番に
+df = df.sort_index() # ソート
 
 
->  列の順序入れ替え
-df.reindex(columns=[cols])
 
+>  pandas一般
+-  DataFrame -> ndarray
+df.values # でok。()などいらない
+
+-  マルチインデックス、マルチカラム
+df.columns = [df.columns, 追加インデックスのlist]
+# マルチインデックスで並び替え
+df = df.sort_index(level=1, axis=1) # level1(level0の下)で並び替え. 列ごと並び替えの時はsort_indexにaxis=1指定
+
+
+-  各列に対して一括で操作: apply
+df.apply(type) # 各列のmax # min, typeなども可能
+df.nunique() 	# ユニーク数
+df.apply(float.is_integer).any() # [True, False, ...]の列に一つでもTrueがあればTrue
+.all() # [True, False, ...]の列が全てTrueならTrue
+
+
+-  pandas 重複削除(抽出)
+drop_duplicates(subset="列名", keep="first")
+
+
+-  値が切り替わっている箇所のみ抽出
+.ne()でnot equalかどうかをboolで返す、shift()で一つ次のdf
+df["col"].ne(df["col"].shift())
 
 
 
 
 
 >  plot
-# 混乱しやすい
-# plt.add_subplotは追加、plt.subplotは上書き、plt.subplotsはfigとax同時定義
+plt.add_subplotは追加、plt.subplotは上書き、plt.subplotsはfigとax同時定義
 
-# DataFrameの特定の列だけ重ねて簡易的にplot
+-   DataFrameの特定の列だけ重ねて簡易的にplot
 df[['sepal_length', 'sepal_width']].plot()
-# 図の軸の数値を指数表記から普通の表記に変換
-plt.ticklabel_format(style='plain',axis='y') # style="plain"が普通、"sci"が指数表記
-# デフォルトの色
-color="tab:green"
-# オプション
+
+-  オプション
+color="tab:green" # デフォルトの色
 linestyle='dashed' # solid, dashed, dashdot, dotted
 linewidth=3
-# 横軸
-ax1.plot(横軸にしたいリストやSeries, df["data"])で横軸も設定可能。時刻とかもおｋ
+- marker
+https://pythondatascience.plavox.info/matplotlib/%E3%83%9E%E3%83%BC%E3%82%AB%E3%83%BC%E3%81%AE%E5%90%8D%E5%89%8D
+- 色
+https://pythondatascience.plavox.info/matplotlib/%E8%89%B2%E3%81%AE%E5%90%8D%E5%89%8D
+
 # 余白
 plt.subplots_adjust(hspace=0.4)
 
 
+-  軸
+# 図の軸の数値を指数表記から普通の表記に変換
+plt.ticklabel_format(style='plain',axis='y') # style="plain"が普通、"sci"が指数表記
+# 横軸
+ax1.plot(横軸にしたいリストやSeries, df["data"])で横軸も設定可能。時刻とかもおｋ
 
--  横に大きいグラフ（基本）
+
+-  横に大きいグラフ（1つ）
+fig, ax = plt.subplots(figsize=(10, 5), dpi=200)
+ax.plot(x1)
+ax.set_title("")
+
+
+-  横に大きいグラフ（2つ並べる）
 fig = plt.figure(figsize=(10, 10), dpi=200)
 ax1 = fig.add_subplot(2, 1, 1)
 ax1.plot(df["col1"], label="", color="tab:blue")
@@ -138,9 +194,9 @@ ax1.plot(df["col2"], label="", color="tab:orange")
 ax1.legend()
 ax1.set_xlabel("")
 ax1.set_ylabel("")
-ax1.set_xlim(0, 1)
-ax1.set_ylim(0, 1)
 ax1.set_title("")
+# ax1.set_xlim(0, 1)
+# ax1.set_ylim(0, 1)
 
 ax2 = fig.add_subplot(2, 1, 2)
 ax2.plot(df["col3"], label="", color="tab:blue")
@@ -148,19 +204,13 @@ ax2.plot(df["col4"], label="", color="tab:orange")
 ax2.legend()
 ax2.set_xlabel("")
 ax2.set_ylabel("")
-ax2.set_xlim(0, 1)
-ax2.set_ylim(0, 1)
 ax2.set_title("")
+# ax2.set_xlim(0, 1)
+# ax2.set_ylim(0, 1)
 
 fig.savefig("img_{}.png".format(dt_now))
 
 
-
-- marker
-https://pythondatascience.plavox.info/matplotlib/%E3%83%9E%E3%83%BC%E3%82%AB%E3%83%BC%E3%81%AE%E5%90%8D%E5%89%8D
-
-- 色
-https://pythondatascience.plavox.info/matplotlib/%E8%89%B2%E3%81%AE%E5%90%8D%E5%89%8D
 
 
 -  二軸
@@ -179,10 +229,7 @@ ax2.set_ylabel("")
 
 
 
->  簡易的
-fig, ax = plt.subplots()
-ax.hist()
-ax.set_title("")
+
 
 
 
@@ -233,27 +280,6 @@ odd_list = [x for x in r if x % 2] # forが先
 
 
 
->  簡単な統計
-df[cols].mean(axis=1) # 引数axisに0を渡すと列ごとの合計値、1を渡すと行ごとの合計値
-df[cols].std(axis=1)
-
--  欠損値を除外して統計量を出す
-np.nansum(), np.nanmean(), np.nanmax(), np.nanmin(), np.nanstd(), np.nanvar()
-df["col1"].max(skipna=True) # これでも同じ
-
-
--  度数分布表
-df["col1"].value_counts(sort=False)
-
-
--  各列に対して一括で操作: apply
-df.apply(type) # 各列のmax # min, typeなども可能
-df.nunique() 	# ユニーク数
-df.apply(float.is_integer).any() # [True, False, ...]の列に一つでもTrueがあればTrue
-.all() # [True, False, ...]の列が全てTrueならTrue
-
-
-
 
 >  リスト
 
@@ -276,22 +302,8 @@ list1.append(["D", "E"])
 # a = ["A", "B", "C"].extend(["D", "E"]) としても a はNone
 
 
->  np
 
 
-
-
-
-
-
->  モジュールのインポートエラー（パス通ってない）
-ModuleNotFoundError: No module named 'kfp'
-
-!pip show モジュール名 # モジュールがインストールされてる場所を確認
-
-import sys
-print(sys.path) # 現在通ってるパスの一覧が表示される。ここにpip showした結果が入ってなければ
-sys.path.append('/path/to/hogehoge')
 
 
 
@@ -301,19 +313,19 @@ sys.path.append('/path/to/hogehoge')
 >  ファイル操作
 os.getcwd() # 現在のフルパス取得
 glob.glob(os.path.join(os.getcwd(), "*.csv")) # globはワイルドカードでファイル名取得したいとき
-fnames = os.listdir(path)
-fnames.sort()
+fnames = os.listdir(path) # ワイルドカード使えないので非推奨
+fnames.sort() # TODO: 0埋めしてないとき正しく数字で並べかえ
 
 -  ディレクトリ作成
-if not os.path.exists(path):
-    os.makedirs(path, exist_ok=True)
+os.makedirs(path, exist_ok=True)
 # exist_ok=Trueで、既に存在しているディレクトリを指定してもエラーにならない
 # os.mkdir()と違ってos.makedirs()は再帰的に作れる
 
 -  削除
 os.remove('test.txt') # ファイルを削除
 shutil.rmtree('data') # 空じゃないディレクトリを再帰的に削除
-
+shutil.move("元", "先")
+shutil.copy("元", "先")
 
 -  存在確認
 os.path.exists(path)
@@ -347,36 +359,34 @@ with open(path, 'a') as f:
 >  JSON
 -  JSONファイルを辞書として読み込む
 with open(path) as f:
-	js_dict = json.load(f)
+	js_dict = json.load(f) # load
 -  JSON文字列 → 辞書
-js_dict = json.loads(js_str)
+js_dict = json.loads(js_str) # load「s」(strのs)
 -  辞書 → JSON文字列
-js_str = json.dumps(js_dict)
+js_str = json.dumps(js_dict) # diump「s」(strのs)
 -  辞書をJSONファイルとして保存
 with open('path', 'w') as f:
     json.dump(js_dict, f)
 
-
-
-- pandas 重複削除(抽出)
-drop_duplicates(subset="列名", keep="first")
-
-
-- 値が切り替わっている箇所のみ抽出
-.ne()でnot equalかどうかをboolで返す、shift()で一つ次のdf
-df["col"].ne(df["col"].shift())
-
-
--  バイナリ（？）（「b'{...}」というデータ）'
+-  バイナリが入っているJSON（？）（「b'{...}」というデータ）'
 js = json.loads(data.decode("utf-8"))
 modeの末尾にbをつける？
 要確認
 
 
->  大きいデータ
+
+>  大きいデータを途中で保存する
 np.save("path", df)
 df = np.load("path", allow_pickle=True)
 
+
+>  辞書
+-  キーをリストから登録、値の初期値あり
+d = dict.fromkeys([key1, key2], 0)
+-  キーと値のリストから登録
+d = dict(zip(keys, values))
+-  キーの値を取得しつつ、存在しない場合はデフォルト値設定
+d = d.get("key", デフォルト値)
 
 
 
@@ -443,14 +453,39 @@ pd.date_range(文字列, periods=50000, freq='40ms') # 5万行ぶん、40msず�
 
 -  特定の時刻より後を抽出、とか
 df[df["time"] > datetime.datetime(2021, 8, 1)]
+df[df["time"] > datetime.datetime(2021, 8, 1)]
+df[df["time"].dt.date == datetime.date(2021, 5, 1)] # datetime.datetimeではなくdatetime.dateなところに注意
 
-https://atmarkit.itmedia.co.jp/ait/articles/2111/09/news015.html
-もっといいところあるかも
-H		hourly frequency
-T, min	minutely frequency
-S		secondly frequency
-L, ms	milliseconds
-U, us	microseconds
+-  フォーマット
+https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases
+https://docs.python.org/ja/3/library/time.html#time.strftime
+B: buiness day frequency
+C: ustom business day frequency
+D: alendar day frequency
+W: eekly frequency
+M: onth end frequency
+SM: emi-month end frequency (15th and end of month)
+BM: usiness month end frequency
+CBM: custom business month end frequency
+MS: month start frequency
+SMS: semi-month start frequency (1st and 15th)
+BMS: business month start frequency
+CBMS: custom business month start frequency
+Q: quarter end frequency
+BQ: business quarter end frequency
+QS: quarter start frequency
+BQS: business quarter start frequency
+A, Y: year end frequency
+BA, BY: business year end frequency
+AS, YS: year start frequency
+BAS, BYS: business year start frequency
+BH: business hour frequency
+H: hourly frequency
+T, min: minutely frequency
+S: secondly frequency
+L, ms: milliseconds
+U, us: microseconds
+N: nanoseconds
 
 
 >  pip
@@ -458,22 +493,6 @@ pip list        # インストール済パッケージ一覧
 pip list -o    # アップデートが必要なパッケージ一覧（-uなら最新のみ表示）
 pip install -U パッケージ名  # アップデート
 pip freeze > requirements.txt # requirements.txt生成＆更新
-
-
-
->  pandas
--  ヘッダなし、読む行や列指定、
-read_csv("", header=None, use_col=[], nrows=100, )
-
-
-- DataFrame -> ndarray
-df.values # でok。()などいらない
-
-
-- multiindex
-df.columns = [df.columns, 追加インデックスのlist]
--  マルチインデックスで並び替え
-df = df.sort_index(level=1, axis=1) # level1(level0の下)で並び替え. 列ごと並び替えの時はsort_indexにaxis=1指定
 
 
 
@@ -509,9 +528,6 @@ df.query(複数条件)
 df.sample(frac=0.5) # 50%
 df.sample(n=100) # 100件
 
-groupby, agg
-df.groupby('列名').agg(np.mean)
-
 np.where
 sort_values
 shift
@@ -523,301 +539,3 @@ astype(int)
 
 
 
-
-
-
-
-
-
-
-
-
-いろいろチートシート
-
-
->  Jupyter Lab
--  サーバ上で実行するとき
-jupyter lab --ip=0.0.0.0 --no-browser
-jupyter-notebook --ip=0.0.0.0 --no-browser
-http://172.24.179.162:8888/lab
-
-
->  DIYサーバ
-ssh -L 8888:localhost:8888 y.miyanishi@172.24.179.162
-172.24.179.162:8888
-
-
--  DIYサーバへsshとscp
-ssh y.miyanishi@172.24.179.162
-scp .  y.miyanishi@172.24.179.162:~/21A/autoencoder
-scp [オプション] (ローカルのパス) (ユーザ名@サーバのホスト名(or IPアドレス):パス)
-
-
--  DIYサーバのOS情報
-Linux version 4.15.0-46-generic (buildd@lgw01-amd64-038) (gcc version 7.3.0 (Ubuntu 7.3.0-16ubuntu3)) #49-Ubuntu SMP Wed Feb 6 09:33:07 UTC 2019
-
--  GPUの個数やそれぞれのステータス
-nvidia-smi
-
-
-
-
->  Linux
--  LinuxのOSを調べる
-cat /proc/version
-
--  zip解凍
-zip -r xxxx.zip ディレクトリ名    # 圧縮
-unzip xxxx.zip                  # 解凍
-unar xxxx.zip                   # Winで日本語ファイル名の場合
-
--  tar解凍
-- tar.gz
-	tar -zcvf xxxx.tar.gz directory # 圧縮
-	tar -zxvf xxxx.tar.gz # 解凍
-- tar
-	tar -cvf xxxx.tar directory # 圧縮
-	tar -xvf xxxx.tar # 解凍
-
--  パーミッション一覧
-http://rousi.com/tag/library/permission.html
-
-
--  ストレージ容量など確認
-df -u # dfはディスク容量を表示、-uはユーザに対して
-du -h -d 1 | sort -h # duは子ディレクトリのディスク容量を表示、-hは単位をいいかんじに
-https://www.suzu6.net/posts/113-command-du/
-
--  プロセス確認
-ps -auxf
-ps aux | grep python  # nohupの実行状況など
-
--  ファイル数カウント
-ls -F | grep -v / | wc -l
-
--  ファイルの中身確認
-wc ファイル名 		# ファイルの中身を見ないで、ファイルの行数や文字数を調べる
-head -n5 ファイル名	# ファイルの最初の行から5行だけ表示
-tail -n5 ファイル名
-
--  screen
-screen -ls # スクリーンの一覧表示
-screen -S hogehoge # 新規作成
-screen -r hogehoge # 既存のスクリーンにアタッチ
-<ctl> + <a>, <d> # 今入っているスクリーンからデタッチ
-screen -d PID # デタッチ
-screen kill hogehoge # 削除
-
-
->  Kubeflow
--  全ポッドの様子を見る？
-kubectl get pods -n kubeflow
--  podを強制的に再起動
-kubectl delete pod -n kubeflow {podの名前}
-
-
->  環境変数
-printenv                                   # 一覧表示（「| grep 変数名」で変数名だけ検索表示）
-echo $HTTP_PROXY                  # 中身確認。「$」必要
-export HTTP_PROXY=http://...  # 代入。「$」不要
-
-.bashrcやbash_profileの違い
-https://www.wakuwakubank.com/posts/389-linux-bashrc/
-sh ~~.shか、
-ただ~~.shか（しらべる）
-
-
->  プロキシ
-
-# 参考 : https://lambdalisue.hatenablog.com/entry/2013/06/25/140630
-export http_proxy=http://proxy.toshiba.co.jp:8080
-export https_proxy=http://proxy.toshiba.co.jp:8080
-# 大文字バージョンしか認識しないプログラム用
-export HTTP_PROXY=http://proxy.toshiba.co.jp:8080
-export HTTPS_PROXY=http://proxy.toshiba.co.jp:8080
-# プロキシを利用しないアドレスの指定
-export no_proxy=127.0.0.1,localhost
-export NO_PROXY=$no_proxy
-
-export https_proxy=http://133.199.110.194:8080
-export http_proxy=http://133.199.110.194:8080
-
-- ファイアウォールでpipが利用できない
-# プロキシサーバーのURLが「http://proxy.toshiba.co.jp」、ポート番号が 「8080」 の場合
-set HTTPS_PROXY=http://proxy.toshiba.co.jp:8080
-
-# またはこれでも行けた（PowerShellのとき）
-python -m pip --proxy="https://proxy.toshiba.co.jp:8080" install pandas
-
-
-- centosでのプロキシの記載場所
-/etc/profile.d/proxy.sh
-http://www.tsis.toshiba.co.jp/itinfra/007_proxy/user.htm
-
-
-
->  EC2インスタンスのプロキシの設定、基本3つ
-①②は、パスを検索できるようにするため。③は、今自分が使っているサーバが安全かどうかを証明するもの
-
-① /etc/resolv.confにDNSサーバを記載
-sudo vim /etc/resolv.conf
-→ nameserver 133.199.91.10 (東芝のDNSサーバのアドレス) を追加
-
-② 環境変数の設定
-
-③ 西沢さんに教えてもらった、証明書
-http://www.tsis.toshiba.co.jp/itinfra/007_proxy/user.htm
-- RedHat系
-sudo mv ./Cisco_Umbrella_Root_CA.cer /etc/pki/ca-trust/source/anchors/Cisco_Umbrella_Root_CA.cer
-sudo chown root:root /etc/pki/ca-trust/source/anchors/Cisco_Umbrella_Root_CA.cer
-sudo chmod 644 /etc/pki/ca-trust/source/anchors/
-sudo update-ca-trust force-enable #★
-sudo update-ca-trust extract
-
-- Ubuntuなどそのほか含め下記URL参考になる
-https://qiita.com/msi/items/9cb90271836386dafce3
-cd /usr/share/ca-certificates
-sudo mkdir mylocal
-sudo cp somewhere/Cisco_Umbrella_Root_CA.cer mylocal/
-# echo "mylocal/mylocal-root-cacert.crt" >> /etc/ca-certificates.conf
-sudo vi /etx/ca-certificates.conf
-# 最後に mylocal/Cisco_Umbrella_Root_CA.cer を追加
-sudo update-ca-certificates
-ls -l /etc/ssl/certs/ | grep mylocal-root-cacert
-
-
->  環境構築
-https://qiita.com/fiftystorm36/items/b2fd47cf32c7694adc2e
-python3 -m venv [newenvname]
-source [newenvname]/bin/activate    # Linux
-[newenvname]/Script/activate           # Windows
-
-
->  ターミナル抜けても処理続ける
-nohup python xx &
-nohup python xx > xx.txt &
-
-
->  vi
-dd	行削除
-yy	行コピー
-p	貼り付け
-u	UNDO
-^	行頭へ移動
-$	行末へ移動
-
--  選択範囲をコピペ
-選択範囲の端にカーソル置いて、v（ビジュアルモードへ）
-範囲選択
-y（コピー）
-貼り付けたい場所にカーソル移動して、p
-
-
-
->  QlikView
-- 時間型で読む
-LOAD
-Timestamp#(Left(time, 19)) as time,
-Timestamp#(Left(time, 10)) as day,
-
-- 飛ばしながら読む
-Where Mod(RecNo(), 5)=0;
-
-
->  Git
--  Linux (Amazon linuxとか)にGitをインストール、プロキシの設定
-sudo yum install git-all
-git config --global http.proxy http://proxy.toshiba.co.jp:8080
-git config --global https.proxy http://proxy.toshiba.co.jp:8080
-git config --global --list # 確認
-git config --global --unset http.proxy # 削除
-
-git config http.proxy http://proxy.toshiba.co.jp:8080
-git config https.proxy http://proxy.toshiba.co.jp:8080
-
-origin = リモートリポジトリのURLの別名
-HEAD = 現在のブランチの先頭
-
--  リモートリポジトリ登録
-git remote add origin 追加したいリポジトリ
-
--  ローカルブランチ削除
-git checkout [別のブランチ]
-git branch -d [削除するブランチ]
--  リモートブランチ削除
-git push --delete origin [削除するブランチ]
-
--  ローカルブランチ名変更
-git branch -m [変更前] [変更後]
-git branch -m [変更後]  # 今いるブランチの名前変更
-
--  リモートブランチをローカルにcheckoutする
-git checkout -b local_branch_name origin/remote_branch_name
-
--  リモートで新しく他の人が作ったブランチをローカルに新しいブランチとして持ってくる
-git pull # リモートの内容をローカルに反映（ローカルブランチのどこにいてもいい）
-git branch -r # リモートブランチの名前を確認
-git checkout -b リモートブランチのローカルでの名前 origin/リモートブランチ名
-
-
-git stash		# 変更を一時退避
-git stash list	# 一時退避した変更を一覧
-git stash pop	# 一時退避した変更を現在のブランチに反映する、反映したstashをlistから削除
-git stash drop stash@{3} # git stash listで一覧した番号を反省せずに削除
-
--  ブランチAにブランチBをマージ
-ブランチAにcheckoutする
-git merge ブランチB
-git push origin ブランチA
-
-
-
->  VSCodeでSSH
-https://qiita.com/nlog2n2/items/1d1358f6913249f3e186
-https://hitori-sekai.com/tool/error-remotessh/
-https://qiita.com/passol78/items/2ad123e39efeb1a5286b
-ssh [Host xxxで指定した名前]で、ターミナルから接続確認できる（鍵の確認）
-
-
->  Windowsショトカ
-- アプリ終了 : Fn(今は"Ctl"と表記) + Alt + F4
-- 行末、行頭 : Fn + 矢印
-- 単語移動 : Ctl + 矢印
-
->  PowerPoint
-- スライドショー開始 : Fn + F5
-- フォントサイズ変更 : Ctl + Shift + <とか>
-- 図形の書式設定 : 右クリック + O
-- テキストボックス挿入 : Alt - N - X - Enter
-
->  Excel
-- 現時刻 : Ctl + ;
-- 日付 : Ctl + :
-- セルのメモ : Shift + Fn + F2
-- セルの書式設定 : Ctl + 1
-
->  Chrome
-- 戻る : Alt + ←
-
-
->  分析詰んだとき確認すること
-- 変数の中身が正しいか
-- ログを読む（途中終了していないか）
-- 使っているデータは正しいか（前のバージョンのものを使っていないか）
-- コマンドが正しいか（引数）
-- データの内容、傾向は把握しているか
-- 使っているマシンに問題はないか（メモリ不足など）
-- 頂いている前情報に齟齬がないか
-- 変える必要がある部分、ない部分を上手く効率よく分ける
-- 過学習じゃないか
-	- 学習曲線を見るか、trainで推論しても同じ傾向が見られるか確認
-- train, testで変数の分布に偏りがないか（ヒストグラムなど）、特にバイナリで片方にしか1が含まれていなかったり
-- 学習が収束しているか
-	- lossがほぼ変化していない（early stoppingになるか）
-	- 学習曲線を見る
-- グラフ
-	- 軸名、タイトル、凡例
-	- 複数のデータを描画するとき、軸の範囲（xlim, ylim）は揃える（ずれてることに気づかないので注意）
-
-
-KPT keep/probrem/try

@@ -1,0 +1,55 @@
+Pythonチートシート（覚えたもの）
+
+
+
+
+
+
+>  結合 
+df_concat = pd.concat([df1, df2], axis=0, ignore_index=True)
+行方向：axis=0（たてにつなげる）
+列方向：axis=1（よこにつなげる）
+ignore_index=True
+
+
+
+
+>  欠損値
+df = df.dropna(how="all")               # すべての値が欠損値である行を削除
+df = df.dropna(how="all", axis=1)   # すべての値が欠損値である列を削除
+df = df.dropna(how="any")             # 一つでも欠損値を含む行を削除
+df = df.dropna(how="any", axis=1) # 一つでも欠損値を含む列を削除
+
+df.fillna(0) # 欠損値を0で置換する
+np.sum(df.isnull()) # 欠損値の数
+
+
+>  削除
+df = df.drop(df["col1"], axis=1) # 非破壊的
+df.drop(df["col1"], axis=1, inplace=True) # 破壊的
+
+
+>  列名、行名変更
+-  個別に変更したいとき
+df_new = df.rename(columns={'元の列名': '新しい列名'}, index={'元の行名': '新しい行名'})
+-  一括変更
+df.columns = ["time", "data"] # 列名を一括で変更
+df = df.set_index(timestamp) # 行名を一括で変更（インデックス付与）、行名は、dfのカラム（ただのリストじゃダメ）
+-  行名削除
+df = df.reset_index(drop=True)
+
+
+
+
+>  簡単な統計
+df[cols].mean(axis=1) # 引数axisに0を渡すと列ごとの合計値、1を渡すと行ごとの合計値
+df[cols].std(axis=1)
+
+-  欠損値を除外して統計量を出す
+np.nansum(), np.nanmean(), np.nanmax(), np.nanmin(), np.nanstd(), np.nanvar()
+df["col1"].max(skipna=True) # これでも同じ
+
+
+-  度数分布表
+df["col1"].value_counts(sort=False)
+
